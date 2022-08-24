@@ -19,6 +19,8 @@ export interface LogItem {
     lv: LV;
 }
 
+export type SendFun = (arr: LogItem[]) => Promise<any>;
+
 export interface VLogConf {
     // 存储的 localStorage 的 key
     localStorageKey: string;
@@ -32,6 +34,8 @@ export interface VLogConf {
     debounceTime: number;
     // 没间隔多少ms存储在本地一次, 0 为不开启本项
     minSavaTime: number;
+    // 用于将日志提交到后台提交到后台
+    sendFun?: SendFun;
 }
 
 const DefConf: VLogConf = {
@@ -82,14 +86,14 @@ export default class VLog {
     }
 
     // 记录原方法
-    initOldPrototype() {
+    private initOldPrototype() {
         this.oldLog = console.log.bind(console);
         this.oldWarn = console.warn.bind(console);
         this.oldErr = console.warn.bind(console);
     }
 
     // 原方法替换
-    prototypeRep() {
+    private prototypeRep() {
         console.log = (...data: any[]) => {
             if (!this.conf.disableCollect) {
                 const logItem: LogItem = VLog.generateLogItem(data, LV.l);
@@ -114,7 +118,7 @@ export default class VLog {
     }
 
     // 错误监控
-    errMonitor() {
+    private errMonitor() {
         // 监听资源错误 以及 代码错误. 缺点 new Img 等资源错误无法监听, 第三方框架 比如 vue的错误无法监听(如果第三方框架错误抛出是通过 console.error 等, 则是可以 通过替换 console.error | throw 方法来捕获)
         if (typeof window === 'object') {
             window.addEventListener(
@@ -143,22 +147,22 @@ export default class VLog {
         this.errMonitor();
     }
 
-    addBufferArr(item: LogItem) {
+    private addBufferArr(item: LogItem) {
         this.bufferArr.push(item);
         this.saveBufferArrDebounce();
     }
 
-    clearBufferArr() {
+    private clearBufferArr() {
         this.bufferArr.length = 0;
     }
 
-    clearStorage() {
+    private clearStorage() {
         const { localStorageKey } = this.conf;
         localStorage.removeItem(localStorageKey);
     }
 
     // 格式化保存的数据
-    formatSavaArr(arr: LogItem[]) {
+    private formatSavaArr(arr: LogItem[]) {
         const { maxLogLength } = this.conf;
         const diff = arr.length - maxLogLength;
         if (diff > 0) {
@@ -168,7 +172,7 @@ export default class VLog {
     }
 
     // 获取存储的数据
-    getSaveArr(): LogItem[] {
+    private getSaveArr(): LogItem[] {
         const { localStorageKey } = this.conf;
         const oldStr = localStorage.getItem(localStorageKey);
         const oldArr: LogItem[] = oldStr ? JSON.parse(oldStr) || [] : [];
@@ -176,7 +180,7 @@ export default class VLog {
     }
 
     // 将数据存储在本地(替换原有数据, 同时也会限制条数)
-    saveArr2LocalStorage(arr: LogItem[]) {
+    private saveArr2LocalStorage(arr: LogItem[]) {
         const { localStorageKey } = this.conf;
         const useArr = this.formatSavaArr(arr);
         localStorage.setItem(localStorageKey, data2VisualStr(useArr));
@@ -184,7 +188,7 @@ export default class VLog {
 
     // 将缓存数据保存到本地存储
     // 如果需要开启 每 minSavaTime 秒存储一次, 则需要强制执行本本方法一次
-    saveBufferArr() {
+    private saveBufferArr() {
         this.oldLog('saveBufferArr()');
         const { minSavaTime } = this.conf;
         let runArr: LogItem[] = [];
@@ -210,12 +214,12 @@ export default class VLog {
     }
 
     // 将缓存数据保存到本地存储 的防抖, 具体在  constructor 实现
-    saveBufferArrDebounce() {
+    private saveBufferArrDebounce() {
         this.conf.disableLog;
     }
 
     // 清空item 以及 这个item 之前的数据
-    clearItemAndBefore(targetItem: LogItem) {
+    private clearItemAndBefore(targetItem: LogItem) {
         const oldArr = this.getSaveArr();
         const index = oldArr.findIndex((item) => {
             return (
@@ -235,19 +239,21 @@ export default class VLog {
     // 将数据提交, 会立刻进行存储到本地
     // 存储最新的一条日志, 如果 成功这条日志及之前的日志清空
     // 失败, 不做处理
-    submit(cbk: (data: LogItem[]) => Promise<any>) {
+    submit(cbk?: (data: LogItem[]) => Promise<any>) {
         this.saveBufferArr();
         const arr = this.getSaveArr();
         const lastItem = arr[arr.length - 1];
         if (!lastItem) {
             // 没有日志可上传
         }
-        cbk(arr)
-            .then(() => {
-                this.clearItemAndBefore(lastItem);
-            })
-            .catch((e) => {
-                // pass
-            });
+        const useCbk = cbk || this.conf.sendFun;
+        useCbk &&
+            cbk(arr)
+                .then(() => {
+                    this.clearItemAndBefore(lastItem);
+                })
+                .catch((e) => {
+                    // pass
+                });
     }
 }

@@ -16,18 +16,25 @@
             const vLog = new VLog();
 
 
-            fetch('https://tuia.cn/test')
-            new Promise((resolve, reject) => {
-                reject(new Error('我是错误事实上'))
-            })
+            // fetch('https://www.zhihu.com/')
+            // new Promise((resolve, reject) => {
+            //     reject(new Error('我是错误事实上'))
+            // })
 
-            setTimeout(() => {
-                vLog.submit(()=> {
-                    return new Promise((resolve, reject) => {
-                        resolve(1)
-                    })
-                })
-            }, 1000)
+            // setTimeout(() => {
+            //     vLog.submit(()=> {
+            //         return new Promise((resolve, reject) => {
+            //             resolve(1)
+            //         })
+            //     })
+            // }, 1000)
+            const aaaa = function() {
+
+            }
+            const reg = /a/
+            for (const aaaaKey in reg) {
+                console.log(aaaaKey, 'aaaaKey-----------');
+            }
         </script>
 <!--        <script src="dist/umd/indesfsdfdsx.js"></script>-->
 <!--        <link rel="stylesheet" href="sddfsfd.css" />-->

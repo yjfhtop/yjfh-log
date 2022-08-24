@@ -100,23 +100,33 @@ export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): any {
     };
 }
 
-export function prototypeAddToJSON() {
-    typeof Function !== 'undefined' && ((Function.prototype as any).toJSON = toJsonBase);
-    typeof Symbol !== 'undefined' && ((Symbol.prototype as any).toJSON = toJsonBase);
+// 修改原型, 不可枚举即可
+export function setPrototype(structureFun: any, key: string, v: any) {
+    Object.defineProperty(structureFun.prototype, key, {
+        value: v,
+        configurable: true,
+        enumerable: false,
+        writable: true,
+    });
+}
 
-    typeof File !== 'undefined' && ((File.prototype as any).toJSON = file2Json);
-    typeof FileList !== 'undefined' && ((FileList.prototype as any).toJSON = fileList2Json);
-    typeof RegExp !== 'undefined' && ((RegExp.prototype as any).toJSON = toJsonBase);
-    typeof ErrorEvent !== 'undefined' && ((ErrorEvent.prototype as any).toJSON = ErrorEvent2Json);
-    typeof BigInt !== 'undefined' && ((BigInt.prototype as any).toJSON = toJsonBase);
-    typeof Element !== 'undefined' && ((Element.prototype as any).toJSON = element2Json);
-    typeof NodeList !== 'undefined' && ((NodeList.prototype as any).toJSON = nodeList2Json);
-    typeof Map !== 'undefined' && ((Map.prototype as any).toJSON = map2Json);
-    typeof Set !== 'undefined' && ((Set.prototype as any).toJSON = set2Json);
-    typeof FormData !== 'undefined' && ((FormData.prototype as any).toJSON = formData2Json);
-    typeof Event !== 'undefined' && ((Event.prototype as any).toJSON = event2Json);
+// 注意,添加的方法必须不可枚举
+export function prototypeAddToJSON() {
+    typeof Function !== 'undefined' && setPrototype(Function, 'toJSON', toJsonBase);
+    typeof Symbol !== 'undefined' && setPrototype(Symbol, 'toJSON', toJsonBase);
+    typeof File !== 'undefined' && setPrototype(File, 'toJSON', file2Json);
+    typeof FileList !== 'undefined' && setPrototype(FileList, 'toJSON', fileList2Json);
+    typeof RegExp !== 'undefined' && setPrototype(RegExp, 'toJSON', toJsonBase);
+    typeof ErrorEvent !== 'undefined' && setPrototype(ErrorEvent, 'toJSON', ErrorEvent2Json);
+    typeof BigInt !== 'undefined' && setPrototype(BigInt, 'toJSON', toJsonBase);
+    typeof Element !== 'undefined' && setPrototype(Element, 'toJSON', element2Json);
+    typeof NodeList !== 'undefined' && setPrototype(NodeList, 'toJSON', nodeList2Json);
+    typeof Map !== 'undefined' && setPrototype(Map, 'toJSON', map2Json);
+    typeof Set !== 'undefined' && setPrototype(Set, 'toJSON', set2Json);
+    typeof FormData !== 'undefined' && setPrototype(FormData, 'toJSON', formData2Json);
+    typeof Event !== 'undefined' && setPrototype(Event, 'toJSON', event2Json);
     typeof PromiseRejectionEvent !== 'undefined' &&
-        ((PromiseRejectionEvent.prototype as any).toJSON = promiseRejectionEvent2Json);
+        setPrototype(PromiseRejectionEvent, 'toJSON', promiseRejectionEvent2Json);
 }
 
 function isElement(value) {
