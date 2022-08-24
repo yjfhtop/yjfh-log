@@ -1,5 +1,5 @@
 import { Console } from 'node:console';
-import { data2VisualStr, prototypeAddToJSON } from '@/utils/data';
+import { data2VisualStr, getDataType, prototypeAddToJSON } from '@/utils/data';
 import { debounce } from './utils/utils';
 import { formDate } from './utils/date';
 
@@ -10,6 +10,7 @@ export enum LV {
     l = 'l',
     w = 'w',
     e = 'e',
+    pe = 'pe',
 }
 export interface LogItem {
     // time: number; // 时间戳
@@ -34,7 +35,7 @@ export interface VLogConf {
 }
 
 const DefConf: VLogConf = {
-    localStorageKey: '__vl',
+    localStorageKey: '__vlog',
     disableCollect: false,
     disableLog: false,
     maxLogLength: 2000,
@@ -46,7 +47,7 @@ export default class VLog {
     // 和 localStorage 组成 存储的 key
     // private nowIndex = 0;
 
-    private conf: VLogConf = { ...DefConf };
+    private readonly conf: VLogConf = { ...DefConf };
 
     private oldLog: Console['log'];
 
@@ -59,6 +60,16 @@ export default class VLog {
 
     // 用于保存 定时器id
     private saveTimeoutID: any = null;
+
+    // 生成log item
+    static generateLogItem(data: any, lv: LV) {
+        const item: LogItem = {
+            date: formDate(new Date()),
+            txt: data2VisualStr(data),
+            lv,
+        };
+        return item;
+    }
 
     constructor(conf: Partial<VLogConf>) {
         this.conf = Object.assign(JSON.parse(JSON.stringify(DefConf)), conf);
@@ -81,43 +92,55 @@ export default class VLog {
     prototypeRep() {
         console.log = (...data: any[]) => {
             if (!this.conf.disableCollect) {
-                const logItem: LogItem = {
-                    // time: Date.now(),
-                    date: formDate(new Date()),
-                    txt: JSON.stringify(data),
-                    lv: LV.l,
-                };
+                const logItem: LogItem = VLog.generateLogItem(data, LV.l);
                 this.addBufferArr(logItem);
             }
             !this.conf.disableLog && this.oldLog(...data);
         };
         console.warn = (...data: any[]) => {
             if (!this.conf.disableCollect) {
-                const logItem: LogItem = {
-                    date: formDate(new Date()),
-                    txt: JSON.stringify(data),
-                    lv: LV.w,
-                };
+                const logItem: LogItem = VLog.generateLogItem(data, LV.w);
                 this.addBufferArr(logItem);
             }
             !this.conf.disableLog && this.oldWarn(...data);
         };
         console.error = (...data: any[]) => {
             if (!this.conf.disableCollect) {
-                const logItem: LogItem = {
-                    date: formDate(new Date()),
-                    txt: JSON.stringify(data),
-                    lv: LV.e,
-                };
+                const logItem: LogItem = VLog.generateLogItem(data, LV.e);
                 this.addBufferArr(logItem);
             }
             !this.conf.disableLog && this.oldErr(...data);
         };
     }
 
+    // 错误监控
+    errMonitor() {
+        // 监听资源错误 以及 代码错误. 缺点 new Img 等资源错误无法监听, 第三方框架 比如 vue的错误无法监听(如果第三方框架错误抛出是通过 console.error 等, 则是可以 通过替换 console.error | throw 方法来捕获)
+        if (typeof window === 'object') {
+            window.addEventListener(
+                'error',
+                (e) => {
+                    const item = VLog.generateLogItem(e, LV.e);
+                    this.oldLog(item, 'errMonitor');
+                    this.addBufferArr(item);
+                },
+                true,
+            );
+
+            // 监听未捕获的 异步 错误
+            window.addEventListener('unhandledrejection', (e) => {
+                this.oldLog('捕获到异常：', e);
+                const item = VLog.generateLogItem(e, LV.pe);
+                this.oldLog(item, 'unhandledrejection');
+                this.addBufferArr(item);
+            });
+        }
+    }
+
     init() {
         this.initOldPrototype();
         this.prototypeRep();
+        this.errMonitor();
     }
 
     addBufferArr(item: LogItem) {
@@ -129,12 +152,9 @@ export default class VLog {
         this.bufferArr.length = 0;
     }
 
-    clearStorage(clearBufferArr = false) {
+    clearStorage() {
         const { localStorageKey } = this.conf;
         localStorage.removeItem(localStorageKey);
-        if (clearBufferArr) {
-            this.bufferArr.length = 0;
-        }
     }
 
     // 格式化保存的数据
@@ -147,19 +167,34 @@ export default class VLog {
         return arr;
     }
 
+    // 获取存储的数据
+    getSaveArr(): LogItem[] {
+        const { localStorageKey } = this.conf;
+        const oldStr = localStorage.getItem(localStorageKey);
+        const oldArr: LogItem[] = oldStr ? JSON.parse(oldStr) || [] : [];
+        return oldArr;
+    }
+
+    // 将数据存储在本地(替换原有数据, 同时也会限制条数)
+    saveArr2LocalStorage(arr: LogItem[]) {
+        const { localStorageKey } = this.conf;
+        const useArr = this.formatSavaArr(arr);
+        localStorage.setItem(localStorageKey, data2VisualStr(useArr));
+    }
+
     // 将缓存数据保存到本地存储
     // 如果需要开启 每 minSavaTime 秒存储一次, 则需要强制执行本本方法一次
     saveBufferArr() {
         this.oldLog('saveBufferArr()');
-        const { localStorageKey, minSavaTime } = this.conf;
+        const { minSavaTime } = this.conf;
+        let runArr: LogItem[] = [];
         minSavaTime && clearTimeout(this.saveTimeoutID);
         try {
-            const oldStr = localStorage.getItem(localStorageKey);
             if (this.bufferArr && this.bufferArr.length > 0) {
-                const oldArr: LogItem[] = oldStr ? JSON.parse(oldStr) || [] : [];
+                const oldArr: LogItem[] = this.getSaveArr();
                 oldArr.push(...this.bufferArr);
-                const useArr = this.formatSavaArr(oldArr);
-                localStorage.setItem(localStorageKey, data2VisualStr(useArr));
+                runArr = oldArr;
+                this.saveArr2LocalStorage(oldArr);
                 this.clearBufferArr();
             }
         } catch (e) {
@@ -171,10 +206,48 @@ export default class VLog {
                 this.saveBufferArr();
             }, minSavaTime);
         }
+        return runArr;
     }
 
     // 将缓存数据保存到本地存储 的防抖, 具体在  constructor 实现
     saveBufferArrDebounce() {
         this.conf.disableLog;
+    }
+
+    // 清空item 以及 这个item 之前的数据
+    clearItemAndBefore(targetItem: LogItem) {
+        const oldArr = this.getSaveArr();
+        const index = oldArr.findIndex((item) => {
+            return (
+                item.txt === targetItem.txt &&
+                item.lv === targetItem.lv &&
+                item.date === targetItem.date
+            );
+        });
+        if (index > 0) {
+            const newArr = oldArr.slice(index + 1);
+            this.saveArr2LocalStorage(newArr);
+        } else {
+            // 如果找不到,可能是超过条数限制被删除了
+        }
+    }
+
+    // 将数据提交, 会立刻进行存储到本地
+    // 存储最新的一条日志, 如果 成功这条日志及之前的日志清空
+    // 失败, 不做处理
+    submit(cbk: (data: LogItem[]) => Promise<any>) {
+        this.saveBufferArr();
+        const arr = this.getSaveArr();
+        const lastItem = arr[arr.length - 1];
+        if (!lastItem) {
+            // 没有日志可上传
+        }
+        cbk(arr)
+            .then(() => {
+                this.clearItemAndBefore(lastItem);
+            })
+            .catch((e) => {
+                // pass
+            });
     }
 }

@@ -15,6 +15,7 @@ type DataType =
     | 'Date'
     | 'RegExp'
     | 'ErrorEvent'
+    | 'Event'
     | 'BigInt'
     | 'Window'
     | 'Element'
@@ -22,50 +23,81 @@ type DataType =
     | 'Map'
     | 'Set';
 
-export function toJsonBase(data: any) {
-    return data.toString();
+export function toJsonBase(this: any) {
+    return this.toString();
 }
-export function file2Json(file: File) {
+export function file2Json(this: File) {
     return {
-        lastModified: file.lastModified,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        webkitRelativePath: file.webkitRelativePath,
+        lastModified: this.lastModified,
+        name: this.name,
+        size: this.size,
+        type: this.type,
+        webkitRelativePath: this.webkitRelativePath,
     };
 }
 
-export function fileList2Json(data: FileList) {
-    return Array.from(data);
+export function fileList2Json(this: FileList) {
+    return Array.from(this);
 }
 
-export function ErrorEvent2Json(data: ErrorEvent) {
-    if (data.error) {
-        return `message: ${data.error.message}
-        stack: ${data.error.stack}`;
+export function ErrorEvent2Json(this: ErrorEvent) {
+    if (this.error) {
+        return {
+            message: this.error.message,
+            stack: this.error.stack,
+        };
     }
-    return `message: ${data.message}
-    stack: ${data.filename} ${data.lineno}:${data.colno}`;
+    return {
+        message: this.message,
+        stack: `${this.filename} ${this.lineno}:${this.colno}`,
+    };
 }
 
-export function element2Json(el: Element) {
-    return el.outerHTML;
+export function element2Json(this: Element) {
+    return this.outerHTML;
 }
 
-export function nodeList2Json(list: NodeList) {
-    return Array.from(list);
+export function nodeList2Json(this: NodeList) {
+    return Array.from(this);
 }
 
-export function map2Json(map: Map<any, any>) {
-    return Object.fromEntries(map.entries());
+export function map2Json(this: Map<any, any>) {
+    return Object.fromEntries(this.entries());
 }
 
-export function set2Json(set: Set<any>) {
-    return Array.from(set);
+export function set2Json(this: Set<any>) {
+    return Array.from(this);
 }
 
-export function formData2Json(formData: FormData) {
-    return Object.fromEntries(formData.entries());
+export function formData2Json(this: FormData) {
+    return Object.fromEntries(this.entries());
+}
+
+export function event2Json(this: Event) {
+    const target = (this.target || this.srcElement) as any;
+    if (!target)
+        return {
+            html: 'Event target is null',
+            sourceUrl: '',
+        };
+    return {
+        html: target.outerHTML,
+        sourceUrl: target.href || target.src,
+    };
+}
+
+export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): any {
+    const { reason } = this;
+    if (!reason) {
+        return {
+            message: 'promiseRejectionEvent: reason is null',
+            stack: '',
+        };
+    }
+    return {
+        message: reason.message,
+        stack: reason.stack,
+    };
 }
 
 export function prototypeAddToJSON() {
@@ -82,6 +114,9 @@ export function prototypeAddToJSON() {
     typeof Map !== 'undefined' && ((Map.prototype as any).toJSON = map2Json);
     typeof Set !== 'undefined' && ((Set.prototype as any).toJSON = set2Json);
     typeof FormData !== 'undefined' && ((FormData.prototype as any).toJSON = formData2Json);
+    typeof Event !== 'undefined' && ((Event.prototype as any).toJSON = event2Json);
+    typeof PromiseRejectionEvent !== 'undefined' &&
+        ((PromiseRejectionEvent.prototype as any).toJSON = promiseRejectionEvent2Json);
 }
 
 function isElement(value) {
@@ -99,7 +134,7 @@ function isElement(value) {
  * @param data
  * @returns {string}  Object  Array Function Null ....
  */
-function getDataType(data: any): DataType {
+export function getDataType(data: any): DataType {
     if (isElement(data)) {
         return 'Element';
     }
@@ -110,7 +145,7 @@ function getDataType(data: any): DataType {
 }
 
 // 尝试将数据转为json, 缺点, 循环引用的出现会导致失败(暂不处理循环引用), 如果失败,会打印失败信息
-function try2Json(data: any, errStr = '__json-err__'): string {
+export function try2Json(data: any, errStr = '__json-err__'): string {
     let strData = errStr;
     try {
         strData = JSON.stringify(data);
