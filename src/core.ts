@@ -1,5 +1,5 @@
 import { Console } from 'node:console';
-import { data2VisualStr, getDataType, prototypeAddToJSON } from '@/utils/data';
+import { data2VisualStr, ErrInfo, getDataType, prototypeAddToJSON } from '@/utils/data';
 import { debounce } from './utils/utils';
 import { formDate } from './utils/date';
 
@@ -12,11 +12,13 @@ export enum LV {
     e = 'e',
     pe = 'pe',
 }
+
 export interface LogItem {
     // time: number; // 时间戳
     date: string; // 时间戳 的可视
     txt: string; // 日志本体
     lv: LV;
+    errInfos?: ErrInfo[];
 }
 
 export type SendFun = (arr: LogItem[]) => Promise<any>;
@@ -46,7 +48,6 @@ const DefConf: VLogConf = {
     debounceTime: 1000 * 2,
     minSavaTime: 1000 * 5,
 };
-
 export default class VLog {
     // 和 localStorage 组成 存储的 key
     // private nowIndex = 0;
@@ -125,6 +126,7 @@ export default class VLog {
                 'error',
                 (e) => {
                     const item = VLog.generateLogItem(e, LV.e);
+                    this.oldLog(e);
                     this.oldLog(item, 'errMonitor');
                     this.addBufferArr(item);
                 },
@@ -145,6 +147,10 @@ export default class VLog {
         this.initOldPrototype();
         this.prototypeRep();
         this.errMonitor();
+        // fetch('https://www.zhihu.com/');
+        // setTimeout(() => {
+        //     throw new Error('aaaaaaaaaaaaaaaaaaaa');
+        // });
     }
 
     private addBufferArr(item: LogItem) {

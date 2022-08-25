@@ -23,6 +23,47 @@ type DataType =
     | 'Map'
     | 'Set';
 
+export interface ErrFileInfo {
+    // 行号
+    lineno: number;
+    // 列号
+    colno: number;
+    // 文件名
+    path: string;
+}
+
+export interface ErrInfo {
+    // 错误信息
+    message: string;
+    // 错误栈信息
+    stack: string;
+    errFileInfos: ErrFileInfo[];
+}
+
+// 从错误的堆栈信息获取 错误文件的url  和 行号 列号
+export function stackStringGetNo(stackStr: string) {
+    const lines = stackStr.split('\n');
+    const reg = /((http|https):\/\/.+):(\d+):(\d+)/i;
+    const targetArr: ErrFileInfo[] = [];
+    // 逐行处理
+    // eslint-disable-next-line no-plusplus
+    for (let i = 0; i < lines.length; i++) {
+        const item = lines[i];
+        const arr = item.match(reg) || [];
+        if (arr.length === 5) {
+            const url = arr[1];
+            const line = Number(arr[3]);
+            const column = Number(arr[4]);
+            targetArr.push({
+                lineno: line,
+                colno: column,
+                path: url,
+            });
+        }
+    }
+    return targetArr;
+}
+
 export function toJsonBase(this: any) {
     return this.toString();
 }
@@ -40,16 +81,11 @@ export function fileList2Json(this: FileList) {
     return Array.from(this);
 }
 
-export function ErrorEvent2Json(this: ErrorEvent) {
-    if (this.error) {
-        return {
-            message: this.error.message,
-            stack: this.error.stack,
-        };
-    }
+export function ErrorEvent2Json(this: ErrorEvent): ErrInfo {
     return {
-        message: this.message,
-        stack: `${this.filename} ${this.lineno}:${this.colno}`,
+        message: this.error?.message || this.message,
+        stack: this.error?.stack || `${this.filename} ${this.lineno}:${this.colno}`,
+        errFileInfos: [{ lineno: this.lineno, colno: this.colno, path: this.filename }],
     };
 }
 
@@ -86,17 +122,21 @@ export function event2Json(this: Event) {
     };
 }
 
-export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): any {
+export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): ErrInfo {
     const { reason } = this;
+    // message: "Failed to fetch"
+    // stack: "TypeError: Failed to fetch\n    at VLog.init (http://localhost:8858/dist/umd/index.js:363:13)\n    at new VLog (http://localhost:8858/dist/umd/index.js:283:18)\n    at http://localhost:8858/:16:26"
     if (!reason) {
         return {
             message: 'promiseRejectionEvent: reason is null',
             stack: '',
+            errFileInfos: [],
         };
     }
     return {
         message: reason.message,
         stack: reason.stack,
+        errFileInfos: stackStringGetNo(reason.stack),
     };
 }
 

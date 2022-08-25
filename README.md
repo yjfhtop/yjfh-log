@@ -15,3 +15,6 @@ ts, eslint, prettier
 
 2. rollup.config
     > LibName
+
+
+### 备忘,item  添加 文件 和 行号
