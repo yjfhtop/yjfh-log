@@ -125,8 +125,6 @@ export function event2Json(this: Event) {
 
 export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): ErrInfo {
     const { reason } = this;
-    // message: "Failed to fetch"
-    // stack: "TypeError: Failed to fetch\n    at VLog.init (http://localhost:8858/dist/umd/index.js:363:13)\n    at new VLog (http://localhost:8858/dist/umd/index.js:283:18)\n    at http://localhost:8858/:16:26"
     if (!reason) {
         return {
             message: 'promiseRejectionEvent: reason is null',
@@ -138,6 +136,14 @@ export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): ErrInfo
         message: reason.message,
         stack: reason.stack,
         errFileInfos: stackStringGetNo(reason.stack),
+    };
+}
+
+export function err2Json(this: Error): ErrInfo {
+    return {
+        message: this.message,
+        stack: this.stack,
+        errFileInfos: stackStringGetNo(this.stack),
     };
 }
 
@@ -168,7 +174,7 @@ export function prototypeAddToJSON() {
     typeof Event !== 'undefined' && setPrototype(Event, 'toJSON', event2Json);
     typeof PromiseRejectionEvent !== 'undefined' &&
         setPrototype(PromiseRejectionEvent, 'toJSON', promiseRejectionEvent2Json);
-    typeof Error !== 'undefined' && setPrototype(Error, 'toJSON', toJsonBase);
+    typeof Error !== 'undefined' && setPrototype(Error, 'toJSON', err2Json);
 }
 
 function isElement(value) {

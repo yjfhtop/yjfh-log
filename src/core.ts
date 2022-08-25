@@ -108,6 +108,7 @@ export default class VLog {
         };
         console.error = (...data: any[]) => {
             if (!this.conf.disableCollect) {
+                this.oldLog(data, 'error');
                 const logItem: LogItem = VLog.generateLogItem(data, LV.e);
                 this.addBufferArr(logItem);
             }
