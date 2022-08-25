@@ -90,7 +90,7 @@ export default class VLog {
     private initOldPrototype() {
         this.oldLog = console.log.bind(console);
         this.oldWarn = console.warn.bind(console);
-        this.oldErr = console.warn.bind(console);
+        this.oldErr = console.error.bind(console);
     }
 
     // 原方法替换

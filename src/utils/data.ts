@@ -21,7 +21,8 @@ type DataType =
     | 'Element'
     | 'NodeList'
     | 'Map'
-    | 'Set';
+    | 'Set'
+    | 'Error';
 
 export interface ErrFileInfo {
     // 行号
@@ -167,6 +168,7 @@ export function prototypeAddToJSON() {
     typeof Event !== 'undefined' && setPrototype(Event, 'toJSON', event2Json);
     typeof PromiseRejectionEvent !== 'undefined' &&
         setPrototype(PromiseRejectionEvent, 'toJSON', promiseRejectionEvent2Json);
+    typeof Error !== 'undefined' && setPrototype(Error, 'toJSON', toJsonBase);
 }
 
 function isElement(value) {
