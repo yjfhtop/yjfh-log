@@ -41,6 +41,31 @@ export interface ErrInfo {
     errFileInfos: ErrFileInfo[];
 }
 
+function isElement(value) {
+    return typeof HTMLElement === 'object'
+        ? value instanceof HTMLElement // DOM2
+        : value &&
+              typeof value === 'object' &&
+              value !== null &&
+              value.nodeType === 1 &&
+              typeof value.nodeName === 'string';
+}
+
+/**
+ * 获取数据类型
+ * @param data
+ * @returns {string}  Object  Array Function Null ....
+ */
+export function getDataType(data: any): DataType {
+    if (isElement(data)) {
+        return 'Element';
+    }
+    const typeStr = Object.prototype.toString.call(data);
+    let useTypeStr = typeStr.slice(8);
+    useTypeStr = useTypeStr.slice(0, useTypeStr.length - 1);
+    return useTypeStr as DataType;
+}
+
 // 从错误的堆栈信息获取 错误文件的url  和 行号 列号
 export function stackStringGetNo(stackStr: string) {
     const lines = stackStr.split('\n');
@@ -133,9 +158,9 @@ export function promiseRejectionEvent2Json(this: PromiseRejectionEvent): ErrInfo
         };
     }
     return {
-        message: reason.message,
-        stack: reason.stack,
-        errFileInfos: stackStringGetNo(reason.stack),
+        message: reason?.message || reason,
+        stack: reason?.stack || '',
+        errFileInfos: !reason?.stack ? [] : stackStringGetNo(reason.stack),
     };
 }
 
@@ -177,31 +202,6 @@ export function prototypeAddToJSON() {
     typeof Error !== 'undefined' && setPrototype(Error, 'toJSON', err2Json);
 }
 
-function isElement(value) {
-    return typeof HTMLElement === 'object'
-        ? value instanceof HTMLElement // DOM2
-        : value &&
-              typeof value === 'object' &&
-              value !== null &&
-              value.nodeType === 1 &&
-              typeof value.nodeName === 'string';
-}
-
-/**
- * 获取数据类型
- * @param data
- * @returns {string}  Object  Array Function Null ....
- */
-export function getDataType(data: any): DataType {
-    if (isElement(data)) {
-        return 'Element';
-    }
-    const typeStr = Object.prototype.toString.call(data);
-    let useTypeStr = typeStr.slice(8);
-    useTypeStr = useTypeStr.slice(0, useTypeStr.length - 1);
-    return useTypeStr as DataType;
-}
-
 // 尝试将数据转为json, 缺点, 循环引用的出现会导致失败(暂不处理循环引用), 如果失败,会打印失败信息
 export function try2Json(data: any, errStr = '__json-err__'): string {
     let strData = errStr;
@@ -227,3 +227,13 @@ export function data2VisualStr(data: any) {
     }
     return targetStr;
 }
+
+// 处理成可供Json 的类型
+/* export function data2CanJsonType(data: any) {
+    const dataType = getDataType(data);
+    switch (dataType) {
+        case 'Array':
+            const newArr = [];
+            return JSON.stringify(newArr);
+    }
+} */

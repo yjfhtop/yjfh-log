@@ -1,20 +1,7 @@
-### rollup 的模板
-主要是为了方便自己搭建库使用
+### 日志收集
 
-### 主要支撑
-ts, eslint, prettier 
+    主要收集前端的打印日志(console.log | console.warn | console.error), 运行时错误日志(比如 null.aaa())  
+    资源加载日志(比如脚本加载失败), 未处理的 Promise 日志
 
-### 保存自动格式化代码
-1. webstorm
-    > 设置中搜索 eslint 或者 prettier, 勾选 **保存时运行xxx**
-
-### 使用之前, 注意事项
-修改以下信息
-1. package.json
-    >name, description, author, license, homepage
-
-2. rollup.config
-    > LibName
-
-
-### 备忘,item  添加 文件 和 行号
+### 注意点
+    1. 本项目为众多原本不存在 toJSON 的原生函数添加了 toJSON 方法, 使得它们能够被 JSON.stringify() 方法调用, 可能会使得 JSON.stringify 出现意外的字段  
