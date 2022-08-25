@@ -3,9 +3,6 @@ import { data2VisualStr, ErrInfo, getDataType, prototypeAddToJSON } from '@/util
 import { debounce } from './utils/utils';
 import { formDate } from './utils/date';
 
-// 立马要要进行添加 json 方法
-prototypeAddToJSON();
-
 export enum LV {
     l = 'l',
     w = 'w',
@@ -144,6 +141,8 @@ export default class VLog {
     }
 
     init() {
+        // 立马要要进行添加 json 方法
+        prototypeAddToJSON();
         this.initOldPrototype();
         this.prototypeRep();
         this.errMonitor();
