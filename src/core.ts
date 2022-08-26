@@ -148,9 +148,9 @@ export default class VLog {
         this.prototypeRep();
         this.errMonitor();
         // fetch('https://www.zhihu.com/');
-        // setTimeout(() => {
-        //     throw new Error('aaaaaaaaaaaaaaaaaaaa');
-        // });
+        setTimeout(() => {
+            throw new Error('aaaaaaaaaaaaaaaaaaaa');
+        });
     }
 
     private addBufferArr(item: LogItem) {
