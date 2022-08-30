@@ -254,7 +254,7 @@ export default class VLog {
         }
         const useCbk = cbk || this.conf.sendFun;
         useCbk &&
-            cbk(arr)
+            useCbk(arr)
                 .then(() => {
                     this.clearItemAndBefore(lastItem);
                 })
