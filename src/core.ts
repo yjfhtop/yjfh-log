@@ -143,14 +143,14 @@ export default class VLog {
 
     init() {
         // 立马要要进行添加 json 方法
-        prototypeAddToJSON();
-        this.initOldPrototype();
-        this.prototypeRep();
-        this.errMonitor();
-        // fetch('https://www.zhihu.com/');
-        setTimeout(() => {
-            throw new Error('aaaaaaaaaaaaaaaaaaaa');
-        });
+        try {
+            prototypeAddToJSON();
+            this.initOldPrototype();
+            this.prototypeRep();
+            this.errMonitor();
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     private addBufferArr(item: LogItem) {

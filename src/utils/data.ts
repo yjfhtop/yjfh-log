@@ -229,11 +229,17 @@ export function data2VisualStr(data: any) {
 }
 
 // 处理成可供Json 的类型
-/* export function data2CanJsonType(data: any) {
-    const dataType = getDataType(data);
-    switch (dataType) {
-        case 'Array':
-            const newArr = [];
-            return JSON.stringify(newArr);
-    }
-} */
+// export function data2CanJsonType(data: any) {
+//     const dataType = getDataType(data);
+//     switch (dataType) {
+//         case 'Array':
+//             return data.map((item) => data2CanJsonType(item));
+//             break;
+//         case 'Object':
+//             const newObj: any = {};
+//             return Object.keys(data).forEach((key) => {
+//                 newObj[key] = data2CanJsonType(data[key]);
+//             });
+//             return newObj;
+//     }
+// }

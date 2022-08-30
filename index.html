@@ -13,7 +13,9 @@
     <body>
         <script>
             // import VLog from "./src/core";
-            const vLog = new VLog();
+            const vLog = new VLog({
+
+            });
             // fetch('https://www.zhihu.com/')
             // new Promise((resolve, reject) => {
             //     reject(new Error('我是错误事实上'))
@@ -26,7 +28,9 @@
             //         })
             //     })
             // }, 1000)
-            console.log([Promise.reject('233333')]);
+            let xxxxxP = Promise.reject('233333')
+            // xxxxxP
+            console.log(xxxxxP.toString());
         </script>
         <script src="https://cdn.staticfile.org/vue/3.2.37/vue.global.prod.js"></script>
 
