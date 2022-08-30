@@ -108,7 +108,6 @@ export default class VLog {
         };
         console.error = (...data: any[]) => {
             if (!this.conf.disableCollect) {
-                this.oldLog(data, 'error');
                 const logItem: LogItem = VLog.generateLogItem(data, LV.e);
                 this.addBufferArr(logItem);
             }
@@ -124,8 +123,6 @@ export default class VLog {
                 'error',
                 (e) => {
                     const item = VLog.generateLogItem(e, LV.e);
-                    this.oldLog(e);
-                    this.oldLog(item, 'errMonitor');
                     this.addBufferArr(item);
                 },
                 true,
@@ -133,9 +130,7 @@ export default class VLog {
 
             // 监听未捕获的 异步 错误
             window.addEventListener('unhandledrejection', (e) => {
-                this.oldLog('捕获到异常：', e);
                 const item = VLog.generateLogItem(e, LV.pe);
-                this.oldLog(item, 'unhandledrejection');
                 this.addBufferArr(item);
             });
         }
@@ -149,13 +144,16 @@ export default class VLog {
             this.prototypeRep();
             this.errMonitor();
         } catch (e) {
-            console.error(e);
+            // console.error(e);
+            this.oldErr(e);
         }
     }
 
     private addBufferArr(item: LogItem) {
-        this.bufferArr.push(item);
-        this.saveBufferArrDebounce();
+        if (!this.conf.disableCollect) {
+            this.bufferArr.push(item);
+            this.saveBufferArrDebounce();
+        }
     }
 
     private clearBufferArr() {
@@ -195,7 +193,6 @@ export default class VLog {
     // 将缓存数据保存到本地存储
     // 如果需要开启 每 minSavaTime 秒存储一次, 则需要强制执行本本方法一次
     private saveBufferArr() {
-        this.oldLog('saveBufferArr()');
         const { minSavaTime } = this.conf;
         let runArr: LogItem[] = [];
         minSavaTime && clearTimeout(this.saveTimeoutID);
