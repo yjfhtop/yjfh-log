@@ -1,5 +1,5 @@
 import { Console } from 'node:console';
-import { data2VisualStr, ErrInfo, getDataType, prototypeAddToJSON } from '@/utils/data';
+import { data2VisualStr, ErrInfo, getDataType, prototypeAddToJSON } from './utils/data';
 import { debounce } from './utils/utils';
 import { formDate } from './utils/date';
 

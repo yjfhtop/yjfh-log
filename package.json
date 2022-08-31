@@ -1,6 +1,6 @@
 {
     "name": "yjfh-log",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "日志处理",
     "main": "dist/es/index.js",
     "module": "dist/umd/index.js",
