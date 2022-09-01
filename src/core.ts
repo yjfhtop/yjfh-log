@@ -1,4 +1,5 @@
 import { Console } from 'node:console';
+import * as Path from 'path';
 import { data2VisualStr, ErrInfo, getDataType, prototypeAddToJSON } from './utils/data';
 import { debounce } from './utils/utils';
 import { formDate } from './utils/date';
@@ -35,15 +36,18 @@ export interface VLogConf {
     minSavaTime: number;
     // 用于将日志提交到后台提交到后台
     sendFun?: SendFun;
+    // 每个item 变成 json 后最长能够为多长, 如果大于这个数, 就会占用 maxLogLength 的长度, 比如 item 长度为1000, itemMaxLen 为: 256, 那么将占用 4个位置
+    itemMaxLen?: number;
 }
 
 const DefConf: VLogConf = {
     localStorageKey: '__vlog',
     disableCollect: false,
     disableLog: false,
-    maxLogLength: 2000,
+    maxLogLength: 1000,
     debounceTime: 1000 * 2,
     minSavaTime: 1000 * 5,
+    itemMaxLen: 1024,
 };
 export default class VLog {
     // 和 localStorage 组成 存储的 key
@@ -151,7 +155,12 @@ export default class VLog {
 
     private addBufferArr(item: LogItem) {
         if (!this.conf.disableCollect) {
-            this.bufferArr.push(item);
+            const jsonStr = data2VisualStr(item);
+            const strLen = jsonStr.length;
+            const len = Math.ceil(strLen / this.conf.itemMaxLen) || 1;
+            const useArr = Array(len).fill(null);
+            useArr[useArr.length - 1] = item;
+            this.bufferArr.push(...useArr);
             this.saveBufferArrDebounce();
         }
     }
@@ -165,7 +174,7 @@ export default class VLog {
         localStorage.removeItem(localStorageKey);
     }
 
-    // 格式化保存的数据
+    // 格式化保存的数据, 主要是最长条数的限制
     private formatSavaArr(arr: LogItem[]) {
         const { maxLogLength } = this.conf;
         const diff = arr.length - maxLogLength;
@@ -187,7 +196,8 @@ export default class VLog {
     private saveArr2LocalStorage(arr: LogItem[]) {
         const { localStorageKey } = this.conf;
         const useArr = this.formatSavaArr(arr);
-        localStorage.setItem(localStorageKey, data2VisualStr(useArr));
+        const useDataStr = data2VisualStr(useArr);
+        localStorage.setItem(localStorageKey, useDataStr);
     }
 
     // 将缓存数据保存到本地存储
