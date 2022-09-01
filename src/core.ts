@@ -36,7 +36,7 @@ export interface VLogConf {
     minSavaTime: number;
     // 用于将日志提交到后台提交到后台
     sendFun?: SendFun;
-    // 每个item 变成 json 后最长能够为多长, 如果大于这个数, 就会占用 maxLogLength 的长度, 比如 item 长度为1000, itemMaxLen 为: 256, 那么将占用 4个位置
+    // 每个item 变成 json 后最长能够为多长, 如果大于这个数, 就会占用 maxLogLength 额外长度, 比如 item 长度为1000, itemMaxLen 为: 256, 那么将占用 4个位置
     itemMaxLen?: number;
 }
 
