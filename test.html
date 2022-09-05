@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+<script>
+    let key = '_s'
+    let sTime = Date.now();
+    for (let i = 0; i < 2000; i++) {
+        const useKey = key + i;
+        let obj = {
+            "uagdr": {
+                "vacesivngtl": [
+                    1626094199,
+                    "9z",
+                    -574447950
+                ],
+                "nevyxfd": [
+                    true,
+                    "RwLCOgzw5H2b"
+                ]
+            },
+            "zgeok": {
+                "rduajrvrczn": true,
+                "kikjfh": "zzZzkP0kWVdRC2"
+            },
+            "ioryqol": 966252.5677744837
+        }
+        localStorage.setItem(useKey, JSON.stringify(obj))
+        // const vStr = localStorage.getItem(useKey)
+        // console.log(vStr);
+        // const sss = JSON.parse(vStr)
+
+        // localStorage.removeItem(useKey)
+        // console.log('总用时', Date.now() - sTime);
+    }
+
+    let allTime =  Date.now() - sTime
+    console.log('总用时', allTime);
+    alert(allTime)
+
+
+    sTime = Date.now();
+    for (let i = 0; i < 2000; i++) {
+        const useKey = key + i;
+        const vStr = localStorage.getItem(useKey)
+        // console.log(vStr);
+        const sss = JSON.parse(vStr)
+    }
+
+    allTime =  Date.now() - sTime
+    console.log('总用时', allTime);
+    alert(allTime)
+
+
+    sTime = Date.now();
+    for (let i = 0; i < 2000; i++) {
+        const useKey = key + i;
+        localStorage.removeItem(useKey)
+    }
+    allTime =  Date.now() - sTime
+    console.log('总用时', allTime);
+    alert(allTime)
+
+    localStorage.clear();
+
+</script>
+</html>

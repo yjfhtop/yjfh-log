@@ -4,4 +4,7 @@
     资源加载日志(比如脚本加载失败), 未处理的 Promise 日志
 
 ### 注意点
-    1. 本项目为众多原本不存在 toJSON 的原生函数添加了 toJSON 方法, 使得它们能够被 JSON.stringify() 方法调用, 可能会使得 JSON.stringify 出现意外的字段  
+    1. 本项目为众多原本不存在 toJSON 的原生函数添加了 toJSON 方法, 使得它们能够被 JSON.stringify() 方法调用, 可能会使得 JSON.stringify 出现意外的字段
+
+
+### 双指针存储, 性能处理(见 )
