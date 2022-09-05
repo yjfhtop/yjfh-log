@@ -1,5 +1,4 @@
 import { Console } from 'node:console';
-import * as Path from 'path';
 import { data2VisualStr, ErrInfo, getDataType, prototypeAddToJSON } from './utils/data';
 import { debounce } from './utils/utils';
 import { formDate } from './utils/date';
@@ -9,6 +8,8 @@ export enum LV {
     w = 'w',
     e = 'e',
     pe = 'pe',
+    // null
+    n = 'n',
 }
 
 export interface LogItem {
@@ -69,8 +70,10 @@ export default class VLog {
 
     // 生成log item
     static generateLogItem(data: any, lv: LV) {
+        const id = formDate(new Date());
+        const useId = lv === LV.n ? `${id}>${parseInt(`${Math.random() * 100000}`, 10)}` : id;
         const item: LogItem = {
-            date: formDate(new Date()),
+            date: useId,
             txt: data2VisualStr(data),
             lv,
         };
@@ -158,7 +161,11 @@ export default class VLog {
             const jsonStr = data2VisualStr(item);
             const strLen = jsonStr.length;
             const len = Math.ceil(strLen / this.conf.itemMaxLen) || 1;
-            const useArr = Array(len).fill(null);
+            const useArr = Array(len);
+            // eslint-disable-next-line no-plusplus
+            for (let i = 0; i < useArr.length; i++) {
+                useArr[i] = VLog.generateLogItem('', LV.n);
+            }
             useArr[useArr.length - 1] = item;
             this.bufferArr.push(...useArr);
             this.saveBufferArrDebounce();
@@ -258,10 +265,14 @@ export default class VLog {
         const lastItem = arr[arr.length - 1];
         if (!lastItem) {
             // 没有日志可上传
+            this.oldLog('没有日志可上传');
         }
         const useCbk = cbk || this.conf.sendFun;
+        const useArr = arr.filter((item) => {
+            return item && item.lv !== LV.n;
+        });
         useCbk &&
-            useCbk(arr)
+            useCbk(useArr)
                 .then(() => {
                     this.clearItemAndBefore(lastItem);
                 })
