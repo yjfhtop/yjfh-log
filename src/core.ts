@@ -20,11 +20,13 @@ export interface LogItem {
     errInfos?: ErrInfo[];
 }
 
-export type SendFun = (arr: LogItem[]) => Promise<any>;
+export type SendFun = (arr: string[]) => Promise<any>;
 
 export interface VLogConf {
     // 存储的 localStorage 的 key
     localStorageKey: string;
+    sIndexKey: string;
+    eIndexKey: string;
     // 开启时, 不会收集日志, 和使用 console 一致
     disableCollect: boolean;
     // 开启时, 不会 调用 console 的方法 打印日志
@@ -39,22 +41,61 @@ export interface VLogConf {
     sendFun?: SendFun;
     // 每个item 变成 json 后最长能够为多长, 如果大于这个数, 就会占用 maxLogLength 额外长度, 比如 item 长度为1000, itemMaxLen 为: 256, 那么将占用 4个位置
     itemMaxLen?: number;
+    setItem: (key: string, data: any) => any;
+    getItem: (key: string) => string;
+    removeItem: (key: string) => any;
 }
-
 const DefConf: VLogConf = {
     localStorageKey: '__vlog',
+    sIndexKey: '_sk',
+    eIndexKey: '_ek',
     disableCollect: false,
     disableLog: false,
     maxLogLength: 1000,
     debounceTime: 1000 * 2,
     minSavaTime: 1000 * 5,
     itemMaxLen: 1024,
+    setItem: (key: string, data: any) => {
+        localStorage.setItem(key, data);
+    },
+    getItem(key: string) {
+        return localStorage.getItem(key);
+    },
+    removeItem(key: string) {
+        return localStorage.removeItem(key);
+    },
 };
 export default class VLog {
     // 和 localStorage 组成 存储的 key
     // private nowIndex = 0;
 
     private readonly conf: VLogConf = { ...DefConf };
+
+    // 数据的开始下标
+    private _sIndex: number;
+
+    // 数据的开始下标
+    get sIndex() {
+        return this._sIndex;
+    }
+
+    set sIndex(v: number) {
+        this._sIndex = v;
+        localStorage.setItem(this.conf.sIndexKey, JSON.stringify(v));
+    }
+
+    // 数据的结束下标
+    private _eIndex: number;
+
+    // 数据的结束下标
+    get eIndex() {
+        return this._eIndex;
+    }
+
+    set eIndex(v: number) {
+        this._eIndex = v;
+        localStorage.setItem(this.conf.eIndexKey, JSON.stringify(v));
+    }
 
     private oldLog: Console['log'];
 
@@ -63,7 +104,7 @@ export default class VLog {
     private oldErr: Console['error'];
 
     // 用于缓冲
-    private bufferArr: LogItem[] = [];
+    private bufferArr: string[] = [];
 
     // 用于保存 定时器id
     private saveTimeoutID: any = null;
@@ -71,23 +112,83 @@ export default class VLog {
     // 生成log item
     static generateLogItem(data: any, lv: LV) {
         const id = formDate(new Date());
-        const useId = lv === LV.n ? `${id}>${parseInt(`${Math.random() * 100000}`, 10)}` : id;
         const item: LogItem = {
-            date: useId,
+            date: id,
             txt: data2VisualStr(data),
             lv,
         };
         return item;
     }
 
+    // static setItem(key: string,)
+
+    // 获取当前存储的数据
+    get allDataLen(): number {
+        const { conf } = this;
+        const { maxLogLength } = conf;
+        // 下标1,0只会出现在第一次初始化时
+        if (this.eIndex === 0) return 0;
+        if (this.eIndex >= this.sIndex) {
+            return this.eIndex - this.sIndex + 1;
+        }
+        return maxLogLength - this.sIndex + 1 + this.eIndex;
+    }
+
+    // 获取存储的数据
+    get saveDataArr(): string[] {
+        const { conf, allDataLen } = this;
+        const { maxLogLength } = conf;
+        // const { allDataLen } = this;
+        const targetArr: string[] = [];
+        let nowIndex = this.sIndex;
+
+        if (allDataLen === 0) {
+            return targetArr;
+        }
+
+        for (let i = 0; i < allDataLen; i++) {
+            const key = conf.localStorageKey + nowIndex;
+            const dataStr = localStorage.getItem(key);
+            if (dataStr) {
+                targetArr.push(dataStr);
+            }
+
+            nowIndex++;
+            if (nowIndex > maxLogLength) {
+                nowIndex = 1;
+            }
+        }
+        return targetArr;
+    }
+
     constructor(conf: Partial<VLogConf>) {
         this.conf = Object.assign(JSON.parse(JSON.stringify(DefConf)), conf);
+        this.conf.getItem = this.conf.getItem || DefConf.getItem;
+        this.conf.setItem = this.conf.setItem || DefConf.setItem;
+        this.conf.removeItem = this.conf.removeItem || DefConf.removeItem;
+        // 开始下标为1
+        this.initIndex();
         // 对 addBufferArr 节流
         // this.addBufferArr = debounce(this.addBufferArr, this, 1000);
         this.saveBufferArrDebounce = debounce(this.saveBufferArr, this, this.conf.debounceTime);
         this.init();
         // 为了唤醒 minSavaTime
         this.saveBufferArr();
+    }
+
+    // 初始化指针坐标
+    private initIndex() {
+        const c = this.conf;
+        const sIndexStr = localStorage.getItem(c.sIndexKey);
+        const eIndexStr = localStorage.getItem(c.eIndexKey);
+        // 开始下标为1, 为什么坐标为0? 因为第一次时, 是没有值的
+        if (sIndexStr && eIndexStr) {
+            this.sIndex = parseInt(sIndexStr, 10) || 1;
+            this.eIndex = parseInt(eIndexStr, 10) || 0;
+        } else {
+            this.sIndex = 1;
+            this.eIndex = 0;
+        }
     }
 
     // 记录原方法
@@ -161,12 +262,8 @@ export default class VLog {
             const jsonStr = data2VisualStr(item);
             const strLen = jsonStr.length;
             const len = Math.ceil(strLen / this.conf.itemMaxLen) || 1;
-            const useArr = Array(len);
-            // eslint-disable-next-line no-plusplus
-            for (let i = 0; i < useArr.length; i++) {
-                useArr[i] = VLog.generateLogItem('', LV.n);
-            }
-            useArr[useArr.length - 1] = item;
+            const useArr: string[] = Array(len);
+            useArr[0] = jsonStr;
             this.bufferArr.push(...useArr);
             this.saveBufferArrDebounce();
         }
@@ -174,11 +271,6 @@ export default class VLog {
 
     private clearBufferArr() {
         this.bufferArr.length = 0;
-    }
-
-    private clearStorage() {
-        const { localStorageKey } = this.conf;
-        localStorage.removeItem(localStorageKey);
     }
 
     // 格式化保存的数据, 主要是最长条数的限制
@@ -191,15 +283,7 @@ export default class VLog {
         return arr;
     }
 
-    // 获取存储的数据
-    private getSaveArr(): LogItem[] {
-        const { localStorageKey } = this.conf;
-        const oldStr = localStorage.getItem(localStorageKey);
-        const oldArr: LogItem[] = oldStr ? JSON.parse(oldStr) || [] : [];
-        return oldArr;
-    }
-
-    // 将数据存储在本地(替换原有数据, 同时也会限制条数)
+    // 将数据存储在本地
     private saveArr2LocalStorage(arr: LogItem[]) {
         const { localStorageKey } = this.conf;
         const useArr = this.formatSavaArr(arr);
@@ -208,18 +292,59 @@ export default class VLog {
     }
 
     // 将缓存数据保存到本地存储
+    saveBuffer2LocalStorage(clearBufferArr = false) {
+        const c = this.conf;
+        let newSIndex = this.sIndex;
+        let newEIndex = this.eIndex;
+        if (this.bufferArr && this.bufferArr.length > 0) {
+            // 缓存的最大长度为 maxLogLength
+            const useBufferArr = this.bufferArr.slice(-c.maxLogLength);
+            for (let i = 0; i < useBufferArr.length; i++) {
+                newEIndex++;
+                if (newEIndex > c.maxLogLength) {
+                    newEIndex = 1;
+                }
+
+                const item = useBufferArr[i];
+                const itemSaveKey = c.localStorageKey + newEIndex;
+                // 数据量满了的情况下, 只可能为 eIndex === maxLogLength 或者 (eIndex < sIndex 且 eIndex 不为0), 为0是初次赋值
+                // 这里是数据没有满的情况
+                if (
+                    (this.eIndex >= this.sIndex && this.eIndex !== c.maxLogLength) ||
+                    this.eIndex === 0
+                ) {
+                    // pass
+                } else {
+                    // 都变化
+                    newSIndex++;
+                    if (newSIndex > c.maxLogLength) {
+                        newSIndex = 1;
+                    }
+                }
+                if (item) {
+                    c.setItem(itemSaveKey, item);
+                } else {
+                    c.removeItem(itemSaveKey);
+                }
+            }
+
+            this.sIndex = newSIndex;
+            this.eIndex = newEIndex;
+
+            // 总条数 = 最大长度 都变化
+            clearBufferArr && this.clearBufferArr();
+        }
+    }
+
+    // 将缓存数据保存到本地
     // 如果需要开启 每 minSavaTime 秒存储一次, 则需要强制执行本本方法一次
     private saveBufferArr() {
         const { minSavaTime } = this.conf;
-        let runArr: LogItem[] = [];
+        const runArr: LogItem[] = [];
         minSavaTime && clearTimeout(this.saveTimeoutID);
         try {
             if (this.bufferArr && this.bufferArr.length > 0) {
-                const oldArr: LogItem[] = this.getSaveArr();
-                oldArr.push(...this.bufferArr);
-                runArr = oldArr;
-                this.saveArr2LocalStorage(oldArr);
-                this.clearBufferArr();
+                this.saveBuffer2LocalStorage(true);
             }
         } catch (e) {
             this.oldErr(e);
@@ -238,46 +363,15 @@ export default class VLog {
         this.conf.disableLog;
     }
 
-    // 清空item 以及 这个item 之前的数据
-    private clearItemAndBefore(targetItem: LogItem) {
-        const oldArr = this.getSaveArr();
-        const index = oldArr.findIndex((item) => {
-            return (
-                item.txt === targetItem.txt &&
-                item.lv === targetItem.lv &&
-                item.date === targetItem.date
-            );
-        });
-        if (index > 0) {
-            const newArr = oldArr.slice(index + 1);
-            this.saveArr2LocalStorage(newArr);
-        } else {
-            // 如果找不到,可能是超过条数限制被删除了
-        }
-    }
-
     // 将数据提交, 会立刻进行存储到本地
-    // 存储最新的一条日志, 如果 成功这条日志及之前的日志清空
-    // 失败, 不做处理
-    submit(cbk?: (data: LogItem[]) => Promise<any>) {
+    submit(cbk?: SendFun) {
         this.saveBufferArr();
-        const arr = this.getSaveArr();
+        const arr = this.saveDataArr;
         const lastItem = arr[arr.length - 1];
         if (!lastItem) {
             // 没有日志可上传
             this.oldLog('没有日志可上传');
         }
-        const useCbk = cbk || this.conf.sendFun;
-        const useArr = arr.filter((item) => {
-            return item && item.lv !== LV.n;
-        });
-        useCbk &&
-            useCbk(useArr)
-                .then(() => {
-                    this.clearItemAndBefore(lastItem);
-                })
-                .catch((e) => {
-                    // pass
-                });
+        cbk || this.conf.sendFun;
     }
 }

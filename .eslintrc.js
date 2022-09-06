@@ -41,5 +41,7 @@ module.exports = {
         'no-shadow': 'off',
         '@typescript-eslint/no-shadow': ['error'],
         'no-unused-vars': 1,
+        'no-plusplus': 1,
+        'no-underscore-dangle': 'off',
     },
 };
