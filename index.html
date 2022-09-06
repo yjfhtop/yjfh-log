@@ -8,15 +8,17 @@
         />
         <meta http-equiv="X-UA-Compatible" content="ie=edge" />
         <title>Document</title>
-<!--        <script src="dist/umd/index.js"></script>-->
+        <script src="dist/umd/index.js"></script>
     </head>
     <body>
         <script>
             // import VLog from "./src/core";
             const vLog = new VLog({
-
+                maxLogLength: 10,
             });
-            console.log(VLog.generateLogItem("", "n"));
+            for (let i = 0; i < 10; i++) {
+                console.log(i);
+            }
         </script>
         <script src="https://cdn.staticfile.org/vue/3.2.37/vue.global.prod.js"></script>
 

@@ -46,7 +46,7 @@ export interface VLogConf {
     removeItem: (key: string) => any;
 }
 const DefConf: VLogConf = {
-    localStorageKey: '__vlog',
+    localStorageKey: '_v',
     sIndexKey: '_sk',
     eIndexKey: '_ek',
     disableCollect: false,
