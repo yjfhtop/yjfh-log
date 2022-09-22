@@ -372,6 +372,8 @@ export default class VLog {
             // 没有日志可上传
             this.oldLog('没有日志可上传');
         }
-        cbk || this.conf.sendFun;
+        const useCbk = cbk || this.conf.sendFun;
+        useCbk && useCbk(arr);
+        // cbk || this.conf.sendFun;
     }
 }
